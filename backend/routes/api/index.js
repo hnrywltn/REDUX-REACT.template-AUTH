@@ -23,10 +23,12 @@ const { requireAuth } = require('../../utils/auth.js');
 const { User } = require('../../db/models');
 
 
-//test
-router.post('/test', function(req, res) {
-  res.json({ requestBody: req.body });
-});
+
+//TESTED with sending a post request with csrf from front end
+// //test
+// router.post('/test', function(req, res) {
+//   res.json({ requestBody: req.body });
+// });
 
 //TESTING////////////////////////////////////////////////////////
 // //test user auth route
