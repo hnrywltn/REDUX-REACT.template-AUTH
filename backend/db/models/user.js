@@ -1,4 +1,5 @@
 'use strict';
+const bcrypt = require('bcryptjs');
 const { Validator } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
@@ -7,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        len: [4, 30],
+        len: [3, 30],
         isNotEmail(value) {
           if (Validator.isEmail(value)) {
             throw new Error('Cannot be an email.');
@@ -29,9 +30,76 @@ module.exports = (sequelize, DataTypes) => {
         len: [60, 60]
       },
     },
-  }, {});
-  User.associate = function(models) {
-    // associations can be defined here
+  },
+  //this adds extra protection with queries
+    //model scope for currentUser that will exclude only the hashedPassword field. Finally, define another scope for including all the fields, which should only be used when checking the login credentials of a user.
+      //These scopes need to be explicitly used when querying. For example, User.scope('currentUser').findByPk(id) will find a User by the specified id and return only the User fields that the currentUser model scope allows.
+  {
+    defaultScope: {
+      attributes: {
+        exclude: ['hashedPassword', 'email', 'createdAt', 'updatedAt'],
+      },
+    },
+    scopes: {
+      currentUser: {
+        attributes: { exclude: ['hashedPassword'] },
+      },
+      loginUser: {
+        attributes: {},
+      },
+    },
+  });
+
+
+  // will return an object with only the User instance information that is safe to save to a JWT.
+  User.prototype.toSafeObject = function() { // remember, this cannot be an arrow function
+    const { id, username, email } = this; // context will be the User instance
+    return { id, username, email };
   };
-  return User;
+
+
+  // accept a password string and return true if there is a match with the User instance's hashedPassword, otherwise it will return false.
+  User.prototype.validatePassword = function (password) {
+    return bcrypt.compareSync(password, this.hashedPassword.toString());
+  };
+
+
+//  use the currentUser scope to return a User with that id.
+User.getCurrentUserById = async function (id) {
+  return await User.scope('currentUser').findByPk(id);
+};
+
+
+//  If the password is valid, then return the user by using the currentUser scope.
+User.login = async function ({ credential, password }) {
+  const { Op } = require('sequelize');
+  const user = await User.scope('loginUser').findOne({
+    where: {
+      [Op.or]: {
+        username: credential,
+        email: credential,
+      },
+    },
+  });
+  if (user && user.validatePassword(password)) {
+    return await User.scope('currentUser').findByPk(user.id);
+  }
+};
+
+
+// Create a User with the username, email, and hashedPassword
+User.signup = async function ({ username, email, password }) {
+  const hashedPassword = bcrypt.hashSync(password);
+  const user = await User.create({
+    username,
+    email,
+    hashedPassword,
+  });
+  return await User.scope('currentUser').findByPk(user.id);
+};
+
+User.associate = function(models) {
+  // associations can be defined here
+};
+return User;
 };
