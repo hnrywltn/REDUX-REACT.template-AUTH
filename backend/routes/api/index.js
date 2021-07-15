@@ -1,0 +1,20 @@
+// backend/routes/api/index.js
+const router = require('express').Router();
+
+
+
+//all routes in this file will be prefixed with (/api)
+
+
+
+//test
+router.post('/test', function(req, res) {
+  res.json({ requestBody: req.body });
+});
+
+
+
+
+
+
+module.exports = router;
