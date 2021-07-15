@@ -8,18 +8,23 @@ import configureStore from './store';
 //bring in what allows you to pass csurf and xsurf to backend and frontend when in dev
 import { restoreCSRF, csrfFetch } from './store/csrf';
 
-const store = configureStore();
 
-if (process.env.NODE_ENV !== "production") {
-  window.store = store;
-}
+//import session (login etc..) from session
+import * as sessionActions from './store/session';
+
+const store = configureStore();
 
 if (process.env.NODE_ENV !== 'production') {
   restoreCSRF();
 
   window.csrfFetch = csrfFetch;
   window.store = store;
+  window.sessionActions = sessionActions;
 }
+
+
+
+
 
 function Root() {
   return (
